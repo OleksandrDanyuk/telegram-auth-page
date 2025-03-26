@@ -7,67 +7,60 @@
   <style>
     body {
       font-family: sans-serif;
+      padding: 40px;
       text-align: center;
-      padding-top: 100px;
     }
-    pre {
-      background-color: #eee;
-      padding: 10px;
+    #log {
+      white-space: pre-wrap;
       text-align: left;
-      max-width: 600px;
-      margin: 20px auto;
-      overflow: auto;
+      background: #eee;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 20px;
       font-size: 14px;
     }
   </style>
 </head>
 <body>
   <h2>Авторизация через Telegram...</h2>
-  <p id="status">Проверяем...</p>
-  <pre id="log"></pre>
+  <p id="status">⏳ Инициализация...</p>
+  <div id="log"></div>
 
   <script>
     const log = (msg) => {
-      document.getElementById("log").textContent += msg + "\n";
+      const logBox = document.getElementById("log");
+      logBox.textContent += msg + "\n";
     };
 
-    try {
-      window.Telegram.WebApp.ready();
+    async function startAuth() {
+      try {
+        window.Telegram.WebApp.ready();
 
-      const initData = window.Telegram.WebApp.initData;
+        const initData = Telegram.WebApp.initData;
+        document.getElementById("status").innerText = "📡 Отправка данных...";
+        log("initData:\n" + initData);
 
-      log("initData:");
-      log(initData);
+        const response = await fetch("https://tglogin-production.up.railway.app/telegram-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData })
+        });
 
-      document.getElementById("status").innerText = "Отправляем данные...";
+        const result = await response.json();
+        log("Ответ от сервера:\n" + JSON.stringify(result, null, 2));
 
-      fetch("https://tglogin-production.up.railway.app/telegram-auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ initData })
-      })
-      .then(res => res.json())
-      .then(data => {
-        log("Ответ от сервера:");
-        log(JSON.stringify(data, null, 2));
-        if (data.status === "ok") {
-          document.getElementById("status").innerText = "Авторизация успешна ✅";
+        if (result.status === "ok") {
+          document.getElementById("status").innerText = "✅ Авторизация успешна";
         } else {
-          document.getElementById("status").innerText = "Ошибка при авторизации ❌";
+          document.getElementById("status").innerText = "❌ Ошибка при авторизации";
         }
-      })
-      .catch(err => {
-        document.getElementById("status").innerText = "Ошибка сети ❌";
-        log("Ошибка fetch:");
-        log(err.toString());
-      });
-    } catch (e) {
-      document.getElementById("status").innerText = "Ошибка JS ❌";
-      log("Ошибка JS:");
-      log(e.toString());
+      } catch (e) {
+        document.getElementById("status").innerText = "❌ Ошибка JS";
+        log("Ошибка:\n" + e.message);
+      }
     }
+
+    startAuth();
   </script>
 </body>
 </html>
